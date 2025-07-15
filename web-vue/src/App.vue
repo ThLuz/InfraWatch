@@ -8,14 +8,13 @@ export default {
 </script>
 
 <template>
-  <div class="app-container" style="display: flex; height: 100vh;">
+  <div class="app-container" style="display: flex; min-height: 100vh;">
     <Sidebar />
     <div style="flex: 1; display: flex; flex-direction: column;">
       <HeaderBar />
-      <main style="flex: 1; padding: 1rem; overflow-y: auto;">
+      <main style="flex: 1; overflow-y: auto;">
         <router-view />
       </main>
     </div>
   </div>
 </template>
-
