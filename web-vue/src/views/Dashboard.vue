@@ -10,7 +10,7 @@ const hardwareStatus = [
 <template>
   <div class="dashboard">
     <h1>Dashboard</h1>
-    <p class="subtitle">Visão geral do monitoramento do hardware</p>
+    <p class="subtitle">Resumo do monitoramento de hardware</p>
 
     <div class="cards">
       <div v-for="(item, i) in hardwareStatus" :key="i" class="card">

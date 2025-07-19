@@ -51,7 +51,7 @@ const getStatusColor = (status: string) => {
 <template>
   <div class="hardware-status">
     <h1>Status do Hardware</h1>
-    <p class="subtitle">Aqui você monitora em tempo real o estado dos principais componentes da máquina.</p>
+    <p class="subtitle">Acompanhe em tempo real o funcionamento dos principais componentes da máquina</p>
 
     <div class="status-grid">
       <div v-for="(item, index) in hardwareDetails" :key="index" class="status-card">

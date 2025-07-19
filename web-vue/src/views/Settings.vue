@@ -15,7 +15,7 @@ const saveSettings = () => {
 <template>
   <div class="settings">
     <h1>Configurações</h1>
-    <p class="subtitle">Aqui você poderá ajustar as configurações do sistema InfraWatch.</p>
+    <p class="subtitle">Nesta seção, você pode configurar as preferências do sistema InfraWatch</p>
 
     <form class="settings-form" @submit.prevent="saveSettings">
       <div class="form-group">
