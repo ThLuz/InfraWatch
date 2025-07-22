@@ -1,7 +1,9 @@
-<?php 
+<?php
 
-use App\Http\Controllers\HardwareStatusController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HardwareStatusController;
 
-Route::post('/hardware/status', [HardwareStatusController::class, 'store']);
-Route::get('/hardware/status', [HardwareStatusController::class, 'show']);
+Route::middleware('api')->group(function () {
+    Route::get('/hardware/status', [HardwareStatusController::class, 'status']);
+});

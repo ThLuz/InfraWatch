@@ -2,39 +2,43 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Http\JsonResponse;
 
 class HardwareStatusController extends Controller
 {
-    public function store(Request $request)
+    public function status(): JsonResponse
     {
-        $validated = $request->validate([
-            'cpu' => 'required|numeric',
-            'cpu_temp' => 'nullable|string',
-            'memory.total' => 'required|numeric',
-            'memory.used' => 'required|numeric',
-            'disk' => 'required|numeric',
-            'disk_total' => 'nullable|string',
-            'disk_used' => 'nullable|string',
-        ]);
+        $osFamily = PHP_OS_FAMILY;
 
-        Cache::put('hardware_status', $validated, now()->addMinutes(2));
-
-        return response()->json([
-            'message' => 'Status recebido com sucesso',
-            'data' => $validated
-        ]);
-    }
-
-    public function show()
-    {
-        $data = Cache::get('hardware_status');
-
-        if (!$data) {
-            return response()->json(['message' => 'Nenhum dado encontrado'], 404);
+        if ($osFamily === 'Windows') {
+            $scriptPath = base_path('../scripts/hardware_status.ps1');
+            if (!file_exists($scriptPath)) {
+                return response()->json(['error' => 'Script PowerShell não encontrado'], 404);
+            }
+            $command = "powershell -NoProfile -ExecutionPolicy Bypass -File \"$scriptPath\"";
+        } elseif (in_array($osFamily, ['Linux', 'Darwin'])) {
+            $scriptPath = base_path('../scripts/hardware_status.sh');
+            if (!file_exists($scriptPath)) {
+                return response()->json(['error' => 'Script Shell não encontrado'], 404);
+            }
+            $command = "bash \"$scriptPath\"";
+        } else {
+            return response()->json(['error' => "SO não suportado: $osFamily"], 400);
         }
 
-        return response()->json(['data' => $data]);
+        exec($command, $output, $returnVar);
+
+        if ($returnVar !== 0) {
+            return response()->json(['error' => 'Erro ao executar o script'], 500);
+        }
+
+        $jsonOutput = implode("\n", $output);
+        $data = json_decode($jsonOutput, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return response()->json(['error' => 'JSON inválido do script', 'raw' => $jsonOutput], 500);
+        }
+
+        return response()->json(['hardware_status' => $data]);
     }
 }
