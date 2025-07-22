@@ -1,59 +1,35 @@
 #!/bin/bash
 
-echo "===== HARDWARE STATUS REPORT ====="
-echo "Data/Hora: $(date)"
-echo "Hostname: $(hostname)"
-echo
+CPU=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')
+MEM_TOTAL=$(free -m | awk '/Mem:/ {print $2}')
+MEM_USED=$(free -m | awk '/Mem:/ {print $3}')
+DISK_USED=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+DISK_TOTAL=$(df -h / | awk 'NR==2 {print $2}')
+DISK_USED_SPACE=$(df -h / | awk 'NR==2 {print $3}')
+CPU_TEMP=$(sensors 2>/dev/null | grep 'Package id 0:' | awk '{print $4}' | sed 's/+//')
 
-# CPU
-echo ">>> CPU"
-lscpu | grep -E 'Model name|Socket|Thread|Core|CPU MHz'
-echo "Uso atual da CPU:"
-top -bn1 | grep "Cpu(s)" | awk '{print "Uso: " $2 "% Usuário, " $4 "% Sistema, " $8 "% Ocioso"}'
-echo
+# Constrói o JSON
+JSON=$(jq -n \
+  --arg cpu "$CPU" \
+  --arg mem_total "$MEM_TOTAL" \
+  --arg mem_used "$MEM_USED" \
+  --arg disk "$DISK_USED" \
+  --arg disk_total "$DISK_TOTAL" \
+  --arg disk_used "$DISK_USED_SPACE" \
+  --arg cpu_temp "$CPU_TEMP" \
+  '{
+    cpu: ($cpu | tonumber),
+    cpu_temp: $cpu_temp,
+    memory: {
+      total: ($mem_total | tonumber),
+      used: ($mem_used | tonumber)
+    },
+    disk: ($disk | tonumber),
+    disk_total: $disk_total,
+    disk_used: $disk_used
+  }')
 
-# Temperatura CPU (se disponível)
-echo ">>> Temperatura da CPU"
-sensors | grep -i 'Core\|Package\|temp'
-echo
-
-# Memória RAM
-echo ">>> Memória RAM"
-free -h
-echo
-
-# Disco
-echo ">>> Disco (uso)"
-df -hT | grep -v tmpfs
-echo
-
-# Disco - SMART (saúde do disco principal)
-echo ">>> Saúde do disco (SMART)"
-DISK=$(lsblk -ndo NAME,TYPE | awk '$2=="disk"{print "/dev/"$1; exit}')
-sudo smartctl -H "$DISK"
-echo
-
-# Placa-mãe
-echo ">>> Placa-mãe"
-sudo dmidecode -t baseboard | grep -E 'Manufacturer|Product Name|Version'
-echo
-
-# Placa de vídeo
-echo ">>> Placa de vídeo"
-lspci | grep -i vga
-echo
-
-# Interfaces de rede
-echo ">>> Interfaces de Rede"
-ip -br address show
-echo
-
-# Bateria (para notebooks)
-if upower -e | grep -q battery; then
-    echo ">>> Bateria"
-    upower -i $(upower -e | grep battery)
-else
-    echo ">>> Bateria: Não encontrado (desktop ou sem suporte)"
-fi
-
-echo "===== FIM DO RELATÓRIO ====="
+# Envia para API
+curl -X POST http://localhost:8000/api/hardware/status \
+  -H "Content-Type: application/json" \
+  -d "$JSON"
