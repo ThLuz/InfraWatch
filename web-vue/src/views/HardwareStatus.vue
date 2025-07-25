@@ -1,37 +1,71 @@
 <script setup lang="ts">
-const hardwareDetails = [
-  {
-    name: 'CPU',
-    status: 'OK',
-    usage: 42,
-    temp: '61°C',
-  },
-  {
-    name: 'Memória RAM',
-    status: 'OK',
-    usage: 48,
-    total: '16 GB',
-    used: '7.8 GB',
-  },
-  {
-    name: 'Disco Rígido',
-    status: 'Atenção',
-    usage: 85,
-    total: '500 GB',
-    used: '425 GB',
-  },
-  {
-    name: 'Placa de Vídeo',
-    status: 'OK',
-    usage: 37,
-    temp: '56°C',
-  },
-  {
-    name: 'Temperatura Geral',
-    status: 'Normal',
-    temp: '59°C',
-  },
-]
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+interface HardwareItem {
+  name: string
+  status: string
+  usage?: number
+  temp?: string
+  total?: string
+  used?: string
+}
+
+const hardwareDetails = ref<HardwareItem[]>([])
+
+const getStatus = (usage: number): string => {
+  if (usage < 70) return 'OK'
+  if (usage < 90) return 'Atenção'
+  return 'Crítico'
+}
+
+const bytesToGB = (bytes: number) => (bytes / 1024 / 1024 / 1024).toFixed(1) + ' GB'
+
+const fetchHardwareStatus = async () => {
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/api/hardware/status')
+    const data = response.data.hardware_status
+
+    hardwareDetails.value = [
+      {
+        name: 'CPU',
+        status: getStatus(data.cpu_usage_percent),
+        usage: data.cpu_usage_percent,
+      },
+      {
+        name: 'Memória RAM',
+        status: getStatus((data.memory_used_mb / data.memory_total_mb) * 100),
+        usage: Number(((data.memory_used_mb / data.memory_total_mb) * 100).toFixed(0)),
+        total: bytesToGB(data.memory_total_mb * 1024),
+        used: bytesToGB(data.memory_used_mb * 1024),
+      },
+      {
+        name: 'Disco Rígido',
+        status: getStatus(data.disk_used_percent),
+        usage: data.disk_used_percent,
+        total: '—', // coloque total real se disponível
+        used: '—',  // coloque usado real se disponível
+      },
+      {
+        name: 'Placa de Vídeo',
+        status: 'OK',
+        usage: 37,
+        temp: '56°C',
+      },
+      {
+        name: 'Temperatura Geral',
+        status: 'Normal',
+        temp: '59°C',
+      },
+    ]
+  } catch (error) {
+    console.error('Erro ao buscar status do hardware:', error)
+  }
+}
+
+onMounted(() => {
+  fetchHardwareStatus()
+})
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -47,6 +81,7 @@ const getStatusColor = (status: string) => {
   }
 }
 </script>
+
 
 <template>
   <div class="hardware-status">
